@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hello World!</title>
+  </head>
+  <body>
+    <h1>Hello World!</h1>
+    <form id="nuevolog">
+    	<textarea name="log" id="log"></textarea>
+    	<input type="submit" value="send">
+    </form>
+    <script type="text/javascript" src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+
+    	$(function() {
+    		$('#nuevolog').on('submit', function(e) {
+    			e.preventDefault();
+    			$.ajax({
+    				url: 'http://localhost:7000/send',
+    				method: 'POST',
+    				data: {
+    					log: $('#log').val()
+    				},
+    				success: function (data) {
+    					console.log (data);
+    				},
+    				error: function (err) {
+    					console.error (err);
+    				}
+    			});
+    		});
+    	});
+
+    	const express = require('express');
+    	var gulp = require('gulp');
+    	const app = express();
+    	const bodyParser = require('body-parser');
+
+    	var port = 7000;
+
+    	const MongoClient = require('mongodb').MongoClient;
+
+    	var db;
+
+    	MongoClient.connect('mongodb://logs_user:logart_pass@ds145292.mlab.com:45292/logs_app', (err, database) => {
+    		if (err) return console.error(err);
+    		db = database;
+		})
+
+    	gulp.task('html', function () {
+    		chrome.runtime.reload();
+		});
+
+		gulp.watch(['**/*.html'], ['html']);
+
+    	var server = app.listen(port, function() {
+    		console.log('listening in port 7000');
+    		app.set('view engine', 'ejs');
+    		app.use(bodyParser.urlencoded({extended: true}))
+    		app.get('/', function(req, res) {
+	    		if (db) {
+	    			var cursor = db.collection('logs').find().toArray(function(err, results) {
+					  console.log(results)
+					  res.send(results);
+					})
+	    		}
+	    	})
+	    	app.post('/send', function(req, res) {
+	    		console.log(req.body);	
+	    		if (db) {
+	    			db.collection('logs').save({timestamp: (new Date()).toString(), log: req.body.log}, function(err, result) {
+	    				if (err) {
+	    					console.error(err);
+	    					res.send({code:500, message:'noop'});
+	    				} else {
+		    				console.log ('saved to database');
+		    				res.send({code: 200, message: 'accepted'});
+		    			}
+	    			})
+	    		}
+	    	});
+    	})
+
+
+    </script>
+  </body>
+</html>
